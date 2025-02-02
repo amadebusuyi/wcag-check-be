@@ -1,0 +1,49 @@
+name: Run Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout code
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      # Step 2: Set up Node.js environment
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: "16" # or the version of Node.js you're using
+
+      # Step 3: Install dependencies
+      - name: Install dependencies
+        run: npm install
+
+      # Step 4: Run tests
+      - name: Run tests
+        run: npm test # or your specific test script
+
+      # Step 5: Upload test results (optional)
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: test-results
+          path: ./test-results # if you're generating test reports (optional)
+
+      # Step 6: Post test status (optional)
+      - name: Post status
+        run: |
+          if [[ $(npm test) == *"fail"* ]]; then
+            echo "Tests failed"
+            exit 1
+          fi
+          echo "Tests passed!"

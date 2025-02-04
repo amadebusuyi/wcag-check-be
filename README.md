@@ -57,7 +57,29 @@ Install the dependencies
 npm install
 ```
 
-Build the Docker Image
+### Run without Docker
+
+Run in dev mode
+
+```bash
+npm run dev
+```
+
+Run in production mode
+
+```bash
+npm run start
+```
+
+Create a build
+
+```bash
+npm run build
+```
+
+### Run with Docker
+
+Build the Docker Image.
 
 ```bash
 docker-compose build

@@ -1,10 +1,11 @@
 version: '3.8'
 services:
-  app:
+  wcag-check-be:
     build: .
+    container_name: wcag-check-be
     ports:
       - "3000:3000"
-    volumes:
-      - .:/app
     environment:
       - NODE_ENV=production
+      - FILE_SIZE_LIMIT=5
+      - GEMINI_KEY=AIzaSyBWeCsoQK_xh6YxZDjeOlaTHRUA84AKWAQ

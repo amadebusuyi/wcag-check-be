@@ -1,4 +1,3 @@
-// src/routes/apiRoutes.ts
 // eslint-disable-next-line import/no-extraneous-dependencies
 import multer from 'multer';
 import { Router } from 'express';

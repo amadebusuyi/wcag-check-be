@@ -1,4 +1,3 @@
-// src/services/accessibilityService.ts
 import { AnalysisResult, AnalysisIssue } from '../interfaces/analysisResult';
 import { parseHTML, checkImageAlt, checkHeadingHierarchy, checkDocumentLanguage, checkEmptyLinks, checkFormInputLabels, checkStyleContrastIssues, checkMissingTitleTag, checkNonDescriptiveLinks } from '../utils/htmlParser';
 import generativeAI from '../utils/generativeAI';

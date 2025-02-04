@@ -7,5 +7,3 @@ services:
       - "3000:3000"
     environment:
       - NODE_ENV=production
-      - FILE_SIZE_LIMIT=5
-      - GEMINI_KEY=AIzaSyBWeCsoQK_xh6YxZDjeOlaTHRUA84AKWAQ

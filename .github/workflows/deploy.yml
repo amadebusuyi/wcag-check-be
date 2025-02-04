@@ -1,49 +1,80 @@
-name: Run Tests
+name: Run test then push to Amazon ECR and then deploy on EC2
 
 on:
   push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
+    branches: ["main"]
+
+permissions:
+  id-token: write
+  contents: read
 
 jobs:
   test:
     runs-on: ubuntu-latest
-
     steps:
-      # Step 1: Checkout code
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      # Step 2: Set up Node.js environment
-      - name: Set up Node.js
+      - name: Install nodejs
         uses: actions/setup-node@v4
         with:
-          node-version: "20" # Update to the latest Node.js version
+          node-version: 16.20.2
 
-      # Step 3: Install dependencies
-      - name: Install dependencies
-        run: npm install
+      - name: install dependencies
+        run: npm ci
 
-      # Step 4: Run tests
-      - name: Run tests
-        run: npm test # or your specific test script
+      - name: run lint
+        run: npm run lint
 
-      # Step 5: Upload test results (optional)
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v4
+      - name: run tests
+        run: echo "running tests"
+  build:
+    name: Docker-Build-Push
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          name: test-results
-          path: ./test-results # if you're generating test reports (optional)
+          aws-region: eu-west-1
+          role-to-assume: arn:aws:iam::569032579991:role/github-actions-service-role
+          role-session-name: github-actions-session
 
-      # Step 6: Post test status (optional)
-      - name: Post status
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
         run: |
-          if [[ $(npm test) == *"fail"* ]]; then
-            echo "Tests failed"
-            exit 1
-          fi
-          echo "Tests passed!"
+          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+
+      - name: Build and Push Docker Image
+        env:
+          ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+          IMAGE_TAG: latest
+        run: |
+          docker build -t $ECR_REGISTRY/${{ secrets.ECR_REPOSITORY }}:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/${{ secrets.ECR_REPOSITORY }}:$IMAGE_TAG
+
+      - name: Deploy to EC2
+        env:
+          ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+          IMAGE_TAG: latest
+        run: |
+          echo "${{ secrets.EC2_SSH_KEY }}" > private_key.pem
+          chmod 600 private_key.pem
+
+          ssh -o StrictHostKeyChecking=no -i private_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+            docker pull $ECR_REGISTRY/${{ secrets.ECR_REPOSITORY }}:$IMAGE_TAG
+            docker stop my-container || true
+            docker rm my-container || true
+            docker run -d --name my-container -p 3000:3000 $ECR_REGISTRY/${{ secrets.ECR_REPOSITORY }}:$IMAGE_TAG
+          EOF

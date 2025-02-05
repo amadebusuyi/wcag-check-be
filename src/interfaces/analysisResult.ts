@@ -3,6 +3,8 @@
  */
 export interface AnalysisIssue {
   issue: string;
+  severity: string;
+  weight: number;
   description: string;
   suggestion: string;
   element?: string;
